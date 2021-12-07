@@ -1,4 +1,4 @@
 ﻿  main.c
-C:\git\assembly_simulator\assembly_simulator\main.c(77,21): warning C4013: 'strlen' undefined; assuming extern returning int
-C:\git\assembly_simulator\assembly_simulator\main.c(80,15): warning C4013: 'strcpy' undefined; assuming extern returning int
+C:\git\assembly_simulator\assembly_simulator\main.c(87,21): warning C4013: 'strlen' undefined; assuming extern returning int
+C:\git\assembly_simulator\assembly_simulator\main.c(90,15): warning C4013: 'strcpy' undefined; assuming extern returning int
   assembly_simulator.vcxproj -> C:\git\assembly_simulator\x64\Debug\assembly_simulator.exe
