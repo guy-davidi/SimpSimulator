@@ -1,4 +1,10 @@
 ﻿  main.c
-C:\git\assembly_simulator\assembly_simulator\main.c(87,21): warning C4013: 'strlen' undefined; assuming extern returning int
-C:\git\assembly_simulator\assembly_simulator\main.c(90,15): warning C4013: 'strcpy' undefined; assuming extern returning int
+C:\git\assembly_simulator\assembly_simulator\main.c(1,1): warning C4005: '_CRT_SECURE_NO_WARNINGS': macro redefinition
+C:\git\assembly_simulator\assembly_simulator\main.c : message : see previous definition of '_CRT_SECURE_NO_WARNINGS'
+C:\git\assembly_simulator\assembly_simulator\main.c(139,15): warning C4013: 'strcpy' undefined; assuming extern returning int
+C:\git\assembly_simulator\assembly_simulator\main.c(450,45): warning C4047: 'function': 'int' differs in levels of indirection from 'char [22]'
+C:\git\assembly_simulator\assembly_simulator\main.c(450,22): warning C4024: 'exit': different types for formal and actual parameter 1
+C:\git\assembly_simulator\assembly_simulator\main.c(457,45): warning C4047: 'function': 'int' differs in levels of indirection from 'char [22]'
+C:\git\assembly_simulator\assembly_simulator\main.c(457,22): warning C4024: 'exit': different types for formal and actual parameter 1
+C:\git\assembly_simulator\assembly_simulator\main.c(434): warning C4715: 'Is_value_in_list': not all control paths return a value
   assembly_simulator.vcxproj -> C:\git\assembly_simulator\x64\Debug\assembly_simulator.exe

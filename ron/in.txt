@@ -1,0 +1,2 @@
+in $t0, $imm1, $0, $0, 5, 0 		# $t0 = IORegister[5] 
+halt
