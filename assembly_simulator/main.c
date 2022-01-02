@@ -3,6 +3,11 @@
 #include <stdint.h>
 #include <stdlib.h>
 
+union Data {
+    unsigned i;
+    unsigned char bytes[4];
+} data;
+
 #define LEN_OF_HW_REG 23
 #define LEN_OF_SIMP_REG 16
 #define LEN_OF_RAM 4096
@@ -16,15 +21,16 @@
 #define TRUE 1
 #define irq1Enable 1
 
-#define MON_DIM  255
+#define MON_DIM  256
 #define diskstatus IORegister[17]
 #define reserved1 IORegister[18]
 #define reserved2 IORegister[19]
 #define monitoraddr IORegister[20]
 #define monitordata IORegister[21]
 #define monitorcmd IORegister[22] 
-char mon[MON_DIM][MON_DIM] = { 0 };
-
+unsigned mon[MON_DIM][MON_DIM] = { 0 };
+unsigned char monitor_mat_bye[MON_DIM][MON_DIM] = { 0 };
+int countcyc = 0;
 
 #define add 0
 #define sub 1
@@ -150,9 +156,13 @@ void get_dmemin_ins_from_file(FILE* file_dmemin, unsigned dmemin_list_RAM[LEN_OF
     int i = 0;
     while (fgets(buffer, BUFFER_RAM_LEN, file_dmemin))
     {
+        if (buffer[0] == 10) // only god knows this line
+            continue;
         ret = strtol(buffer, NULL, 16);
-        dmemin_list_RAM[i++] = ret;
-       // printf("%d", dmemin_list_RAM[i-1]); //debage line
+        dmemin_list_RAM[i] = ret;
+        i++;
+       // printf("adress :%d value: %d \n",i ,dmemin_list_RAM[i-1]); //debage line
+        
     }
 }
 
@@ -167,20 +177,32 @@ void clear_interrupt(unsigned* IORegister) {
         IORegister[i] = 0;
 }
 
-void monitor(char mon[MON_DIM][MON_DIM], unsigned target_pix, unsigned data)
+void monitor(unsigned mon[MON_DIM][MON_DIM], unsigned target_pix, unsigned data, int* R, unsigned* IORegister)
 {
+    union Data data_to_yuv;
+    data_to_yuv.i = data;
     int row = 0;
     int col = 0;
-
-    while (target_pix > MON_DIM)
+    //printf("the target pix: %d, data is :%d", target_pix, data);
+    /*while (target_pix > MON_DIM)
     {
+      
         target_pix -= MON_DIM;
         row++;
-    }
-    col = target_pix;
-    mon[row][col] = data;
-    printf("\nmonitor[%d][%d] data is: %u \n", row, col, data);
+        printf("the a1:%d , the target pix:%d , thr row is=%d\n", R[5], target_pix, row);
+    }*/
+    //printf("the a1:%d , the target pix:%d , thr row is=%d\n", R[5], target_pix, row);
+    row = target_pix / 256;
+    col = (target_pix % 256);
+    printf("the a1:%d ,the target pix:%d ,col=%d, thr row is=%d,monitorcmd=%d\n",R[5], target_pix,col, row,monitorcmd);
+    //col = target_pix;
+    //printf("the index row:%d col=%d", row, col);
 
+    mon[row][col] = data;
+   
+    monitor_mat_bye[row][col] = data_to_yuv.bytes[0];
+    //printf("\nmonitor[%d][%d] data is: %u \n", row, col, data);
+  
 }
 
 void Read_write_Disk(int dmemin[4096], int disk_list[2048], unsigned *IORegister)
@@ -202,9 +224,86 @@ void Read_write_Disk(int dmemin[4096], int disk_list[2048], unsigned *IORegister
     }
 }
 
+void get_reg_name_by_table(int reg_number, char reg_name_by_table[15]) {
+    switch (reg_number)
+    {
+    case 0:
+        strcpy(reg_name_by_table, "irq0enable");
+        break;
+    case 1:
+        strcpy(reg_name_by_table, "irq1enable");
+        break;
+    case 2:
+        strcpy(reg_name_by_table, "irq2enable");
+        break;
+    case 3:
+        strcpy(reg_name_by_table, "irq0status");
+        break;
+    case 4:
+        strcpy(reg_name_by_table, "irq1status");
+        break;
+    case 5:
+        strcpy(reg_name_by_table, "irq2status");
+        break;
+    case 6:
+        strcpy(reg_name_by_table, "irqhandler");
+        break;
+    case 7:
+        strcpy(reg_name_by_table, "irqreturn");
+        break;
+    case 8:
+        strcpy(reg_name_by_table, "clks");
+        break;
+    case 9:
+        strcpy(reg_name_by_table, "leds");
+        break;
+    case 10:
+        strcpy(reg_name_by_table, "display7seg");
+        break;
+    case 11:
+        strcpy(reg_name_by_table, "timerenable");
+        break;
+    case 12:
+        strcpy(reg_name_by_table, "timercurrent");
+        break;
+    case 13:
+        strcpy(reg_name_by_table, "timermax");
+        break;
+    case 14:
+        strcpy(reg_name_by_table, "diskcmd");
+        break;
+    case 15:
+        strcpy(reg_name_by_table, "disksector");
+        break;
+    case 16:
+        strcpy(reg_name_by_table, "diskbuffer");
+        break;
+    case 17:
+        strcpy(reg_name_by_table, "diskstatus");
+        break;
+    case 18:
+        strcpy(reg_name_by_table, "reserved");
+        break;
+    case 19:
+        strcpy(reg_name_by_table, "reserved");
+        break;
+    case 20:
+        strcpy(reg_name_by_table, "monitoraddr");
+        break;
+    case 21:
+        strcpy(reg_name_by_table, "monitordata");
+        break;
+    case 22:
+        strcpy(reg_name_by_table, "monitorcmd");
+        break;
+    default:
+        break;
+    }
+}
+
 unsigned Execute(unsigned opcode, int *rd, int *rs, int*rt, int *rm, int *immediate1,
     int *immediate2, int *MEM, unsigned*pc,int *R , unsigned* IORegister, 
-    int * interrupt_mode, FILE* leds_file, int *disk_list) {
+    int * interrupt_mode, FILE* leds_file, int *disk_list, FILE* Files[15],int cycles) {
     unsigned PC_holder = *pc;
     
     int irq = (irq0enable & irq0status) | (irq1enable & irq1status) | (irq2enable & irq2status);
@@ -212,7 +311,9 @@ unsigned Execute(unsigned opcode, int *rd, int *rs, int*rt, int *rm, int *immedi
     unsigned temp_leds;
     unsigned mask = createMask(0, 11);
     unsigned msb = 0;
-    int countcyc = 0;
+    
+    char reg_name_by_table[15] = { 0 };
+   
 
     if (countcyc == 1024){
         countcyc = 0;
@@ -230,7 +331,7 @@ unsigned Execute(unsigned opcode, int *rd, int *rs, int*rt, int *rm, int *immedi
         return TRUE;
     }
 
-    
+    //printf("\nthe x=%d \n", R[4]);
     switch (opcode)
     {    
     case add:
@@ -306,10 +407,9 @@ unsigned Execute(unsigned opcode, int *rd, int *rs, int*rt, int *rm, int *immedi
         }
         break;
     case lw:
+         //printf(" the adress is %d\n", (MEM[R[*rs] + R[*rt]]));
         if ((*rd) != 0 && ((*rd) != 1) && ((*rd) != 2))
             R[*rd] = MEM[(R[*rs]) + R[*rt]] + R[*rm];
-       // printf(" R[rd]=%x R[rs]=%x,R[rt]=%x,R[rm]=%x \n", R[*rd], R[*rs], R[*rt], R[*rm]);
-
         break;
     case sw:
         MEM[R[*rs] + R[*rt]] = R[*rm] + R[*rd];
@@ -325,6 +425,7 @@ unsigned Execute(unsigned opcode, int *rd, int *rs, int*rt, int *rm, int *immedi
         clear_interrupt(IORegister);
         break;
     case in:
+        // here we read from IO registers
         //if user want to readd from monitor -> return 0.
         if ((R[*rs] + R[*rt]) == 22)
         {
@@ -333,15 +434,28 @@ unsigned Execute(unsigned opcode, int *rd, int *rs, int*rt, int *rm, int *immedi
         }
         if ((*rd) != 0 && ((*rd) != 1) && ((*rd) != 2))
             R[*rd] = IORegister[R[*rs] + R[*rt]];
-        
+
+        get_reg_name_by_table(R[*rs] + R[*rt], reg_name_by_table);
+      //  fprintf(Files[8], "%X READ %s %.8X \n", cycles, reg_name_by_table, R[*rd]);
+       // fflush(Files[8]);
+
         break;
     case out:
+        // here we writing to IO registers
         // hold led status before possible change
         temp_leds = leds; 
 
+        // handle with 7segdisplay
+        if ((R[*rs] + R[*rt]) == 10 &&(IORegister[R[*rs] + R[*rt]] != R[*rm])) 
+            fprintf(Files[11], "%d %.8X \n", cycles, R[*rm]);
+        
+
         IORegister[R[*rs] + R[*rt]] = R[*rm];
-        if ((diskcmd != 0) && (diskstatus == 0) && (countcyc == 0))
-        {
+
+        printf("diskcmd=%d diskstatus=%d countcyc=%d \n",diskcmd,diskstatus,countcyc);
+        // handle with harddisk
+        if ((diskcmd != 0) && (diskstatus == 0)){
+            
             Read_write_Disk(MEM, disk_list, IORegister);
             diskstatus = 1;
         }
@@ -352,14 +466,22 @@ unsigned Execute(unsigned opcode, int *rd, int *rs, int*rt, int *rm, int *immedi
             fprintf(leds_file, "%d %x\n", timercurrent, leds);
             //fclose(leds_file);
         }
-        if (monitorcmd)
-            monitor(mon, monitoraddr, monitordata);
         
+        if (monitorcmd) {
+            
+            monitor(mon, monitoraddr, monitordata,R, IORegister);
+        }
+        
+        get_reg_name_by_table(R[*rs] + R[*rt], reg_name_by_table);
+        fprintf(Files[8], "%X WRITE %s %.8X \n", cycles, reg_name_by_table, R[*rm]);
+       
         break;
     case halt:
         printf("\n############ halt ############\n");
         return FALSE;
     }
+
+    //printf(" monitoraddr= %d, monitordata =%d , monitorcmd =%d, $t0=%d , $t1=%d , $a0=%d , $s0=%d,$s1=%d \n",monitoraddr,monitordata,monitorcmd,R[7],R[8],R[4],R[10],R[11]);
     if ((*pc) == PC_holder)
       (*pc)++;
     //printf(" opcode: %d , RD = %d, RS = %d ,RT = %d,RM = %d ,R[rd]=%d,", opcode, *rd, *rs, *rt, *rm, R[*rd]);
@@ -446,10 +568,19 @@ void open_files(FILE** Files ,char ** argv) {
     for (int j = 1; j < 15; j++) {
         if (j>4)
         {
-            Files[j] = fopen(argv[j], "w");
-            if (Files[j] == NULL)
-                exit("Problem openning file");
-            //printf("Success %s\n", argv[j]);
+            if (j==14)
+            {
+                Files[j] = fopen(argv[j], "wb");
+                if (Files[j] == NULL)
+                    exit("Problem openning file");
+            }
+            else
+            {
+                Files[j] = fopen(argv[j], "w");
+                if (Files[j] == NULL)
+                    exit("Problem openning file");
+                //printf("Success %s\n", argv[j]);
+            }
         }
         else
         {
@@ -482,7 +613,7 @@ void decode(int simp_reg[LEN_OF_SIMP_REG],char current_inst[LEN_48_BITS], char h
     holder[1] = current_inst[1];
     *OP_Code = strtol(holder, NULL, 16);
 
-    printf(",OPCODE_PRE: %d ", *OP_Code);
+    //printf(",OPCODE_PRE: %d ", *OP_Code);
     zero_holder(holder);
 
     //get RD
@@ -528,6 +659,7 @@ void decode(int simp_reg[LEN_OF_SIMP_REG],char current_inst[LEN_48_BITS], char h
     // if the MSB is bigger than 7 in 
     //hexa then is negative number
     //need to set the bits to 1.        
+   
     if(holder[0] > '7')
         (*immediate2)|= mask;
     simp_reg[2] = *immediate2;
@@ -546,6 +678,44 @@ void HarDdisk_to_list(FILE * diskinfile,int disk_list[2048]) {
         disk_list[i++] = ret;
         //printf("%x\n", disk_list[i-1]); //debage line
     }
+}
+
+void creatmonitor(FILE* motinor_file)
+{// here we creat monitor.txt
+    for (int i = 0;i <= MON_DIM; i++)
+    {
+        for (int j = 0; j <= MON_DIM; j++)
+        {
+            fprintf(motinor_file,"%.2x\n", mon[i][j]);
+        }
+    }
+}
+
+void creatmonitoryuv(FILE* motinoryuv_file)
+{   // here we creat monitor.yuv
+    //here we writting to binary file
+   /*
+    for (int i = 0;i <= MON_DIM; i++)
+    {
+        for (int j = 0; j <= MON_DIM; j++)
+        { 
+           // printf("%x", mon[i][j]);
+            //fprintf(motinoryuv_file, "%.2x", mon[i][j]);
+            fwrite(&(monin1bye[i][j]), sizeof(unsigned char), 1, motinoryuv_file);
+            printf("i=%d,j=%d, data = %d\n",i,j, monin1bye[i][j]);
+            fflush(motinoryuv_file);
+        }
+    }*/
+
+    fwrite(monitor_mat_bye, sizeof(monitor_mat_bye), 1, motinoryuv_file);
+
+
+
+}   
+
+void creatdiskout(int disk_list[2048], FILE* diskout_file) {
+    for (int i = 0; i < 2048; i++)
+        fprintf(diskout_file, "%.8X\n", disk_list[i]);
 }
 
 
@@ -592,6 +762,7 @@ int main(int argc, char** argv)
 
     //fetch
     char current_inst[LEN_48_BITS] = { 0 };
+    char current_inst_trace[13] = { 0 };
     char holder[4] = { 0 };
 
     // init registers before decode
@@ -608,7 +779,7 @@ int main(int argc, char** argv)
     unsigned mask = 0xFFFFF000;
     unsigned running = 1;
     int cycles = 0;
-
+    
     while (running)
     {
         irq1_handler(cycles, irq2_list, IORegister);
@@ -616,33 +787,47 @@ int main(int argc, char** argv)
 
         // here we fetch the currnt instraction
         mystrcpy(current_inst, imemin_inst[program_counter]);
-        
+        mystrcpy(current_inst_trace, imemin_inst[program_counter]);
+        current_inst_trace[12] = '\0';
         //-------------------------------//
         printf("\n");
         myprintf(current_inst);
+        printf(" programcounter=%d\n", program_counter);
         //-------------------------------//
-
+        
         //here we decode the instruction
         decode(simp_reg, current_inst, holder, &OP_Code, &register_RD, &register_RS,
             &register_RT, &register_RM, &immediate1, &immediate2, &immediate1_n, mask);
- 
+        
+        
+        //-------------------------------//
+        //here we writing to trace.txt
+        //this is trace on simp registers
+        fprintf(Files[7], "%.3X %s %.8X %.8X %.8X %.8X %.8X %.8X %.8X %.8X %.8X %.8X %.8X %.8X %.8X %.8X %.8X %.8X\n",
+            program_counter, current_inst_trace,
+            simp_reg[0], simp_reg[1], simp_reg[2], simp_reg[3], simp_reg[4], simp_reg[5], simp_reg[6], simp_reg[7],
+            simp_reg[8], simp_reg[9], simp_reg[10], simp_reg[11], simp_reg[12], simp_reg[13], simp_reg[14], simp_reg[15]);
+        
+        //-------------------------------//
         //here we excetute the instraction
         running = Execute(OP_Code, &register_RD, &register_RS, &register_RT, &register_RM
             ,&immediate1, &immediate2, dmemin_list_RAM, &program_counter, 
-            simp_reg, IORegister, &interrupt_mode,Files[10], disk_list);
+            simp_reg, IORegister, &interrupt_mode,Files[10], disk_list,Files, cycles);
 
         //count cycles time
         cycles++;
     }
         
     //-------------------------------//
-    printf(" $t0: %d ,$t1: %d ,ram is:%d ,pc: %d ", simp_reg[7], simp_reg[8], dmemin_list_RAM[33], program_counter);
+   // printf("$v0: %d $t0: %d ,$t1: %d ,ram is:%d ,pc: %d ", simp_reg[3],simp_reg[7], simp_reg[8], dmemin_list_RAM[33], program_counter);
     //-------------------------------//
 
     Creat_dmemout(dmemin_list_RAM, Files[5]);
     Creat_regout(simp_reg, Files[6]);
     Creat_cycles(cycles, Files[9]);
-
+    creatmonitor(Files[13]);
+    creatmonitoryuv(Files[14]);
+    creatdiskout(disk_list, Files[12]);
     close_files(Files, argv);
 
     return 0;
