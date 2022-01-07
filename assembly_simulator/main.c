@@ -28,9 +28,13 @@ union Data {
 #define monitoraddr IORegister[20]
 #define monitordata IORegister[21]
 #define monitorcmd IORegister[22] 
+
+// define globals
+// LG
 unsigned mon[MON_DIM][MON_DIM] = { 0 };
 unsigned char monitor_mat_bye[MON_DIM][MON_DIM] = { 0 };
 int countcyc = 0;
+int readcount, writecount = 0;
 
 #define add 0
 #define sub 1
@@ -194,7 +198,7 @@ void monitor(unsigned mon[MON_DIM][MON_DIM], unsigned target_pix, unsigned data,
     //printf("the a1:%d , the target pix:%d , thr row is=%d\n", R[5], target_pix, row);
     row = target_pix / 256;
     col = (target_pix % 256);
-    printf("the a1:%d ,the target pix:%d ,col=%d, thr row is=%d,monitorcmd=%d\n",R[5], target_pix,col, row,monitorcmd);
+   // printf("the a1:%d ,the target pix:%d ,col=%d, thr row is=%d,monitorcmd=%d\n",R[5], target_pix,col, row,monitorcmd);
     //col = target_pix;
     //printf("the index row:%d col=%d", row, col);
 
@@ -207,6 +211,16 @@ void monitor(unsigned mon[MON_DIM][MON_DIM], unsigned target_pix, unsigned data,
 
 void Read_write_Disk(int dmemin[4096], int disk_list[2048], unsigned *IORegister)
 {
+
+    if (diskcmd==1)
+    {
+        readcount++;
+    }
+    if(diskcmd==2)
+    {
+        writecount++;
+    }
+
     int i = 0;
     if (diskcmd == 1)        //read sector reads 16 lines from disk to dmemin
     {
@@ -314,13 +328,21 @@ unsigned Execute(unsigned opcode, int *rd, int *rs, int*rt, int *rm, int *immedi
     
     char reg_name_by_table[15] = { 0 };
    
-
-    if (countcyc == 1024){
+    //printf("##### $t1=%d diskcmd=%d diskstatus=%d countcyc=%d $t0=%d $rs=%d $rt=%d $rm=%d imm1=%d imm2=%d readcount=%d writecount=%d\n", 
+    //    R[8],diskcmd, diskstatus, countcyc,R[7],*rs,*rt,*rm,*immediate1,*immediate2,readcount,writecount);
+    
+    if (diskstatus)
+    {
+        countcyc++;
+    }
+    if (countcyc == 5){
         countcyc = 0;
         diskstatus = 0;
         irq1status = 1;
 
     }
+
+
 
     if ((irq == 1) && ((*interrupt_mode) == NotIninterruptMode))
     {
@@ -449,16 +471,18 @@ unsigned Execute(unsigned opcode, int *rd, int *rs, int*rt, int *rm, int *immedi
         if ((R[*rs] + R[*rt]) == 10 &&(IORegister[R[*rs] + R[*rt]] != R[*rm])) 
             fprintf(Files[11], "%d %.8X \n", cycles, R[*rm]);
         
+       
 
         IORegister[R[*rs] + R[*rt]] = R[*rm];
 
-        printf("diskcmd=%d diskstatus=%d countcyc=%d \n",diskcmd,diskstatus,countcyc);
+        
         // handle with harddisk
-        if ((diskcmd != 0) && (diskstatus == 0)){
+        if ((diskcmd != 0) && (diskstatus == 0) && (countcyc==0)){
             
             Read_write_Disk(MEM, disk_list, IORegister);
             diskstatus = 1;
         }
+        
         
         // handle led status change
         if (9 == R[*rs] + R[*rt] && leds != temp_leds ) {
@@ -477,7 +501,7 @@ unsigned Execute(unsigned opcode, int *rd, int *rs, int*rt, int *rm, int *immedi
        
         break;
     case halt:
-        printf("\n############ halt ############\n");
+        //printf("\n############ halt ############\n");
         return FALSE;
     }
 
@@ -485,7 +509,7 @@ unsigned Execute(unsigned opcode, int *rd, int *rs, int*rt, int *rm, int *immedi
     if ((*pc) == PC_holder)
       (*pc)++;
     //printf(" opcode: %d , RD = %d, RS = %d ,RT = %d,RM = %d ,R[rd]=%d,", opcode, *rd, *rs, *rt, *rm, R[*rd]);
-    countcyc++;
+    
     return TRUE;
 }
 
@@ -790,9 +814,9 @@ int main(int argc, char** argv)
         mystrcpy(current_inst_trace, imemin_inst[program_counter]);
         current_inst_trace[12] = '\0';
         //-------------------------------//
-        printf("\n");
-        myprintf(current_inst);
-        printf(" programcounter=%d\n", program_counter);
+      //  printf("\n");
+      //  myprintf(current_inst);
+      //  printf(" programcounter=%d\n", program_counter);
         //-------------------------------//
         
         //here we decode the instruction
