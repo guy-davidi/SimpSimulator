@@ -1,0 +1,5 @@
+﻿  main.c
+C:\Users\guyda\OneDrive\שולחן העבודה\205493448_208845685\asm\asm\main.c(503,23): warning C4018: '<': signed/unsigned mismatch
+C:\Users\guyda\OneDrive\שולחן העבודה\205493448_208845685\asm\asm\main.c(513,23): warning C4018: '<': signed/unsigned mismatch
+C:\Users\guyda\OneDrive\שולחן העבודה\205493448_208845685\asm\asm\main.c(188): warning C4715: 'label_to_line_num': not all control paths return a value
+  asm.vcxproj -> C:\Users\guyda\OneDrive\שולחן העבודה\205493448_208845685\asm\Debug\asm.exe
